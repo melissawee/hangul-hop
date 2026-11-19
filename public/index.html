@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hangul Hop — learn to type Korean</title>
+<meta name="description" content="Learn to type Korean (Hangul) with cute word-first lessons, a level test, key practice and typing speed tests. Works offline — install it on your phone.">
+
+<!-- PWA / installability -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#ffc9e0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hangul Hop">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="shortcut icon" href="icons/favicon.ico">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+<span class="twinkle" style="left:8%;top:18%;font-size:22px">✦</span>
+<span class="twinkle" style="right:12%;top:12%;font-size:30px;animation-delay:-1s">✦</span>
+<span class="twinkle" style="left:44%;top:6%;font-size:16px;animation-delay:-2s">✦</span>
+<span class="twinkle" style="right:6%;bottom:22%;font-size:24px;animation-delay:-1.5s">✦</span>
+<span class="twinkle" style="left:5%;bottom:30%;font-size:18px;animation-delay:-.5s">✦</span>
+
+<header>
+  <div class="logo" id="logo" title="Home">🐰 Hangul Hop <small>한글 폴짝</small></div>
+  <button class="icon-btn" id="mute" aria-label="Toggle sound">🔔 Sound on</button>
+</header>
+<main id="app"></main>
+<noscript><p style="text-align:center;padding:40px">Hangul Hop needs JavaScript to run. Please enable it and reload. 🐰</p></noscript>
+
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

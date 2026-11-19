@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Hangul Hop</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd1e6"/><stop offset=".55" stop-color="#ecd9ff"/><stop offset="1" stop-color="#cfe6ff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".42" r=".55"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <clipPath id="c"><rect width="512" height="512" rx="116"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <g clip-path="url(#c)">
+    <circle cx="256" cy="236" r="250" fill="url(#glow)"/>
+    <circle cx="70" cy="452" r="86" fill="#fff3b8" opacity=".55"/>
+    <circle cx="452" cy="70" r="74" fill="#c9f3e3" opacity=".6"/>
+  </g>
+  <ellipse cx="248" cy="414" rx="132" ry="17" fill="#c9a8f5" opacity=".42"/>
+<g transform="translate(80.0 84) scale(1.62)">
+  <ellipse cx="68" cy="50" rx="20" ry="46" fill="#fff" stroke="#f0cfe2" stroke-width="3.5" transform="rotate(-12 68 50)"/>
+  <ellipse cx="68" cy="56" rx="10" ry="30" fill="#ffc9e0" transform="rotate(-12 68 56)"/>
+  <ellipse cx="132" cy="50" rx="20" ry="46" fill="#fff" stroke="#f0cfe2" stroke-width="3.5" transform="rotate(12 132 50)"/>
+  <ellipse cx="132" cy="56" rx="10" ry="30" fill="#ffc9e0" transform="rotate(12 132 56)"/>
+  <ellipse cx="100" cy="124" rx="72" ry="58" fill="#fff" stroke="#f0cfe2" stroke-width="3.5"/>
+  <path d="M146 92 l-21-10 v20 z M146 92 l21-10 v20 z" fill="#b9a4ff"/>
+  <circle cx="146" cy="92" r="6.5" fill="#e2d8ff"/>
+  <circle cx="54" cy="139" r="14" fill="#ffb3d1" opacity=".7"/>
+  <circle cx="146" cy="139" r="14" fill="#ffb3d1" opacity=".7"/>
+  <ellipse cx="76" cy="121" rx="8" ry="10.5" fill="#4a3b5c"/><circle cx="73" cy="117" r="3.2" fill="#fff"/>
+  <ellipse cx="124" cy="121" rx="8" ry="10.5" fill="#4a3b5c"/><circle cx="121" cy="117" r="3.2" fill="#fff"/>
+  <ellipse cx="100" cy="135" rx="5" ry="3.6" fill="#ff9ec7"/>
+  <path d="M90 143 Q95 151 100 143 Q105 151 110 143" fill="none" stroke="#4a3b5c" stroke-width="3.4" stroke-linecap="round"/>
+</g>
+
+  <g transform="translate(370 368) scale(1.0) translate(-60 -60)">
+    <rect x="2" y="12" width="116" height="106" rx="30" fill="#d9ccff"/>
+    <rect x="2" y="4" width="116" height="104" rx="30" fill="#fff" stroke="#e7defc" stroke-width="3"/>
+    <rect x="12" y="12" width="96" height="48" rx="22" fill="#fff4fa" opacity=".9"/>
+    <g fill="none" stroke="#8f76ee" stroke-width="9.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M60 20 V30"/><path d="M40 38 H80"/><circle cx="60" cy="68" r="19"/>
+    </g>
+  </g>
+  <path d="M92 90 Q95.96 108.04 114 112 Q95.96 115.96 92 134 Q88.04 115.96 70 112 Q88.04 108.04 92 90 Z" fill="#fff" opacity="0.9"/><path d="M424 152 Q426.88 165.12 440 168 Q426.88 170.88 424 184 Q421.12 170.88 408 168 Q421.12 165.12 424 152 Z" fill="#fff" opacity="0.85"/><path d="M120 318 Q122.16 327.84 132 330 Q122.16 332.16 120 342 Q117.84 332.16 108 330 Q117.84 327.84 120 318 Z" fill="#fff" opacity="0.8"/>
+</svg>

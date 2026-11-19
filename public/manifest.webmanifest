@@ -1,0 +1,28 @@
+{
+  "id": "/",
+  "name": "Hangul Hop — learn to type Korean",
+  "short_name": "Hangul Hop",
+  "description": "Learn to type Korean (Hangul) with cute word-first lessons, a level test, key practice and speed tests.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#fff2f9",
+  "theme_color": "#ffc9e0",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Find my level", "short_name": "Level test", "description": "Take the typing placement test", "url": "./#level", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Key Practice", "short_name": "Key practice", "description": "Memorise where each key is", "url": "./#keys", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Speed Test", "short_name": "Speed test", "description": "Test your typing speed", "url": "./#speed", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Lessons", "short_name": "Lessons", "description": "Pick a lesson", "url": "./#lessons", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}
