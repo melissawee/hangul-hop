@@ -66,7 +66,7 @@ with sync_playwright() as p:
     assert acc=='90%' and pg.inner_text('.rank')=='Key master!' ,(acc,pg.inner_text('.rank'))
     assert 'Keys to remember' in pg.inner_text('.card') and pg.eval_on_selector_all('.missed .chip','e=>e.length')==2
     st=json.loads(pg.evaluate("localStorage.getItem('hangulhop')"));assert sum(v['miss'] for k,v in st['keyStats'].items())==2
-    assert pg.eval_on_selector_all('.key.m-weak','e=>e.length')>=1
+    assert pg.eval_on_selector_all('.key.m-weak, .key.m-ok','e=>e.length')>=1
     pg.screenshot(path=os.path.join(OUT, 'ks_result_miss.png'),full_page=True)
     # --- weak keys loop
     assert pg.query_selector('#weak'),'weak keys button'

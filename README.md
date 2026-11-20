@@ -3,7 +3,7 @@
 A cute pastel game that teaches and tests **Korean (Hangul) typing** — for learners who can speak a bit
 (hello, Duolingo!) but have never typed it. Installable on your phone as a PWA, works offline.
 
-**Features:** placement test · 16 word-first lessons · power-ups (shift, compound vowels, double finals) ·
+**Features:** placement test · 22 word-first lessons (11 sentence packs, up to 100+ keystroke master sentences) · power-ups (shift, compound vowels, double finals) ·
 real sentences · speed test (타수/min) · Key Practice for memorising the 2-set keyboard · phone-sized keyboard.
 
 ## Install on your phone

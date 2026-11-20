@@ -72,14 +72,14 @@ with sync_playwright() as p:
     # --- 7. every new sentence pack plays through on desktop; speed Sentences mode
     ctx,pg,errs=new(b,viewport={'width':1000,'height':900})
     pg.click('#bLessons')
-    for i in range(11,16):
+    for i in range(11,22):
         pg.click(f'.lcard[data-i="{i}"]');pg.click('#go')
         for r in range(10):
             pg.wait_for_function("document.querySelector('#target').textContent.length>0");typ(pg);pg.wait_for_timeout(800)
         assert 'Lesson complete' in pg.inner_text('.rank') and pg.inner_text('.bigstars').count('★')==3,i
         if i==15: pg.screenshot(path=os.path.join(OUT, 'res_culture.png'))
         pg.click('#map')
-    print('packs 12-16 playable, 3 stars each')
+    print('packs 12-22 playable, 3 stars each')
     pg.click('#back');pg.click('#bSpeed');pg.click('#segT button[data-v="30"]');pg.click('#segL button[data-v="sent"]');pg.screenshot(path=os.path.join(OUT, 'speed_setup.png'))
     pg.click('#go')
     for n in range(4): typ(pg);pg.wait_for_timeout(100)
