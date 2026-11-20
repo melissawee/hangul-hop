@@ -344,3 +344,22 @@ main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 @keyframes glow{0%,100%{box-shadow:0 4px 0 var(--mintd),0 0 0 0 rgba(98,201,162,.55)}50%{box-shadow:0 4px 0 var(--mintd),0 0 0 10px rgba(98,201,162,0)}}
 @media (max-width:700px){.wsteps{flex-wrap:nowrap;gap:4px}.wsteps .wstep,.wsteps .wstep.cur{font-size:0;padding:4px 8px}.wsteps .wstep i{font-size:17px;margin:0}.wbanner{font-size:13px;padding:6px 10px}.wbanner b{font-size:15px}}
 @media (prefers-reduced-motion:reduce){.btn.nudge{animation:none}}
+
+/* ---------- email sign-in gate + privacy page ---------- */
+.gate{max-width:460px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.gate-sub{margin:0;color:var(--soft)}
+.gate form{width:100%;display:flex;flex-direction:column;gap:10px;text-align:left}
+.gate .lbl{font-family:'Jua',sans-serif;font-size:17px}
+.gate input[type=email]{width:100%;font:inherit;font-size:18px;padding:12px 16px;border-radius:18px;border:3px solid var(--lav);background:#fff;color:var(--ink);outline:none}
+.gate input[type=email]:focus{border-color:var(--pink2);box-shadow:0 0 0 4px rgba(255,158,199,.25)}
+.gate .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;color:var(--ink);cursor:pointer}
+.consent input{width:22px;height:22px;flex:none;margin-top:2px;accent-color:var(--pinkd)}
+.consent a{color:var(--lavd)}
+.gate-msg{min-height:20px;font-size:15px}.gate-msg.bad{color:#d4456f}.gate-msg.ok{color:var(--mintd)}
+.pinkbtn{background:var(--pink2);color:#fff;box-shadow:0 5px 0 var(--pinkd)}
+.pinkbtn:disabled{opacity:.7}
+.level-chip.who{margin-top:6px}.em-addr{max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
+.legal{max-width:640px;margin:0 auto;padding:24px 16px calc(40px + env(safe-area-inset-bottom))}
+.legal .card{display:flex;flex-direction:column;gap:6px}.legal p{margin:6px 0;line-height:1.55}
+.legal a{color:var(--lavd)}.legal a.btn{color:#fff}

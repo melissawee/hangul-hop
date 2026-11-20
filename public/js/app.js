@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const stars=(n,sz)=>'★'.repeat(n)+'<i>★</i>'.repeat(3-n);
-let save={stars:{},best:{},mute:false,hints:true,placed:null,keyStats:{},keyBest:{},warm:{}};
+let save={stars:{},best:{},mute:false,hints:true,placed:null,keyStats:{},keyBest:{},warm:{},email:null,consent:null};
 try{Object.assign(save,JSON.parse(localStorage.getItem('hangulhop')||'{}'));}catch(e){}
 const persist=()=>{try{localStorage.setItem('hangulhop',JSON.stringify(save));}catch(e){}};
 
@@ -154,6 +154,7 @@ function home(){
       <button class="btn ghost big" id="bFree">🎈 Free Play</button>
     </div>
     ${pl?`<div class="level-chip">${lv[1]} Your level: ${lv[0]} <button id="bRetake">retake test</button></div>`:''}
+    ${GATE_ON&&save.email?`<div class="level-chip who">👤 <span class="em-addr" id="whoEmail"></span> <button id="bSignOut">not you?</button></div>`:''}
     <div class="install" id="install"></div>
     <div class="stats">
       <div class="stat"><b>${totalStars()} / ${LESSONS.length*3}</b>stars collected</div>
@@ -162,6 +163,7 @@ function home(){
     <div class="note">Type on your keyboard (or tap the on-screen keys on a phone). Works with any normal English keyboard.</div>
   </div>`,()=>{$('#bLessons').onclick=lessonMap;$('#bSpeed').onclick=speedSetup;$('#bFree').onclick=freePlay;$('#bKeys').onclick=()=>keySetup();if($('#bWeak'))$('#bWeak').onclick=()=>startWarmup(-1);
     if($('#bPlace'))$('#bPlace').onclick=placementIntro;if($('#bRetake'))$('#bRetake').onclick=placementIntro;
+    if($('#whoEmail'))$('#whoEmail').textContent=save.email;if($('#bSignOut'))$('#bSignOut').onclick=signOut;
     renderInstall();});
 }
 
@@ -853,9 +855,63 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   });
 }
 
+// ---------- EMAIL SIGN-IN GATE (on only when config.js has a Google Apps Script URL) ----------
+const GATE_ON=typeof SIGNUP_URL==='string'&&/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(SIGNUP_URL);
+const EMAIL_OK=e=>e.length<=254&&/^[^\s@<>"',;:()\[\]\\]+@[^\s@<>"',;:()\[\]\\]+\.[^\s@<>"',;:()\[\]\\]{2,}$/.test(e);
+async function submitEmail(email){
+  const ctrl=new AbortController(),t=setTimeout(()=>ctrl.abort(),12000);
+  try{
+    // text/plain keeps this a "simple" request, so the browser sends no CORS pre-flight to Google
+    const res=await fetch(SIGNUP_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},redirect:'follow',signal:ctrl.signal,
+      body:JSON.stringify({email,consent:true,consentVersion:CONSENT_VERSION,hp:'',source:location.origin})});
+    if(!res.ok)throw new Error('http '+res.status);
+    return await res.json();
+  }finally{clearTimeout(t);}
+}
+function gate(onDone){
+  setScreen(`<div class="card gate">
+    ${mascot('bob')}
+    <h1 style="margin:6px 0 0">Hop in! 🐰</h1>
+    <p class="gate-sub">Sign in with your email to start learning Korean typing.</p>
+    <form id="gateForm" novalidate autocomplete="on">
+      <label class="lbl" for="gEmail">Your email</label>
+      <input id="gEmail" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" maxlength="254" required>
+      <input class="hp" id="gHp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <label class="consent"><input type="checkbox" id="gConsent"><span>I'm 13 or older, and I agree that Hangul Hop may store my email and send me occasional updates. <a href="privacy.html" target="_blank" rel="noopener">Privacy details</a></span></label>
+      <div class="gate-msg" id="gMsg" role="alert" aria-live="polite"></div>
+      <button class="btn pinkbtn big" id="gGo" type="submit">Let's hop →</button>
+    </form>
+    <div class="note" style="margin:0">Your game progress stays on this device. We never sell your email.</div>
+  </div>`,()=>{
+    const form=$('#gateForm'),msg=$('#gMsg'),go=$('#gGo'),em=$('#gEmail');
+    const say=(t,ok)=>{msg.textContent=t;msg.className='gate-msg'+(t?(ok?' ok':' bad'):'');};
+    form.addEventListener('submit',async ev=>{
+      ev.preventDefault();
+      const email=em.value.trim().toLowerCase();
+      if(!EMAIL_OK(email)){say('Hmm, that email doesn\'t look right. Check for typos? 🌸');em.focus();return;}
+      if(!$('#gConsent').checked){say('Please tick the box so we know it\'s okay to save your email.');return;}
+      if($('#gHp').value){save.email=email;persist();onDone();return;}   // bots fill the hidden field: let them "in", store nothing
+      go.disabled=true;go.textContent='Hopping…';say('');
+      try{
+        const r=await submitEmail(email);
+        if(!r||!r.ok)throw new Error(r&&r.error||'failed');
+        save.email=email;save.consent={v:CONSENT_VERSION,at:Date.now()};persist();
+        sfx.ok();confetti(18);onDone();
+      }catch(err){
+        go.disabled=false;go.textContent='Let\'s hop →';
+        say(navigator.onLine===false?'You\'re offline. Connect to the internet once to sign in, then you can play offline. 📶'
+          :'We couldn\'t save that just now. Please try again in a moment. 🙏');
+      }
+    });
+    if(matchMedia('(hover:hover)').matches)setTimeout(()=>em.focus(),50);
+  });
+}
+function signOut(){save.email=null;save.consent=null;persist();start();}
+
 // ---------- start (supports app-icon shortcuts like /#keys) ----------
 const ROUTES={lessons:lessonMap,keys:()=>keySetup(),speed:speedSetup,free:freePlay,level:placementIntro};
 function start(){
+  if(GATE_ON&&!save.email)return gate(start);           // required sign-in; the shortcut in the URL (#keys etc.) is kept for afterwards
   const r=ROUTES[location.hash.slice(1)];
   if(r){history.replaceState(null,'',location.pathname+location.search);r();}else home();
 }

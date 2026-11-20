@@ -9,11 +9,11 @@
  *
  * Bump VERSION whenever you change the PRECACHE list (a changed sw.js file is what triggers an update).
  */
-const VERSION = '2026-11-20.4';
+const VERSION = '2026-11-20.5';
 const SHELL = 'hangul-hop-shell-' + VERSION;
 const RUNTIME = 'hangul-hop-runtime-v1';
 const PRECACHE = [
-  './', 'index.html', 'css/styles.css', 'js/engine.js', 'js/app.js', 'manifest.webmanifest',
+  './', 'index.html', 'css/styles.css', 'js/config.js', 'js/engine.js', 'js/app.js', 'privacy.html', 'js/privacy.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-192.png', 'icons/icon-maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon.svg', 'icons/favicon-32.png', 'icons/favicon.ico'
 ];
