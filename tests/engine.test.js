@@ -9,6 +9,8 @@ let fail=0;const bad=(...a)=>{fail++;console.log('FAIL',...a)};
 const hasCompoundV=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(VCOMB).includes(VOW[Math.floor((c%588)/28)])});
 const hasDoubleT=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(TCOMB).includes(TAIL[c%28])});
 const groups={};
+if(LESSONS.length!==Object.keys(LESSONS).length||LESSONS.some(l=>!l||!l.id))bad('holes in LESSONS (stray comma?)');
+if(new Set(LESSONS.map(l=>l.id)).size!==LESSONS.length)bad('duplicate lesson ids');
 LESSONS.forEach((L,i)=>{
   if(L.items.length<10)bad('need >=10 items',L.id,L.items.length);
   const seen=new Set();
@@ -30,7 +32,7 @@ LESSONS.forEach((L,i)=>{
     if(L.id==='compound'&&!hasCompoundV(kr))bad('no compound vowel',kr);
     if(L.id==='double'&&!hasDoubleT(kr))bad('no double final',kr);
     if(L.id==='phrases'&&!kr.includes(' '))bad('phrase without space',kr);
-    if(L.group==='Sentence Studio'){
+    if((L.group==='Sentence Studio'||L.group==='Master Class')){
       if(kr.split(' ').length<2)bad('sentence needs 2+ words',kr);
       if(/[A-Za-z.,?!]/.test(kr))bad('untypable char',kr);
       if(L.items.length<10)bad('sentence pack small',L.id);
@@ -38,8 +40,8 @@ LESSONS.forEach((L,i)=>{
   });
 });
 // advanced packs must get progressively longer on average
-const adv=LESSONS.filter(l=>l.group==='Sentence Studio');
-if(adv.length<4)bad('want >=4 sentence packs',adv.length);
+const adv=LESSONS.filter(l=>l.group==='Sentence Studio'||l.group==='Master Class');
+if(adv.length<11)bad('want >=11 sentence packs',adv.length);
 const avg=l=>l.items.reduce((a,w)=>a+decomp(w[0]).length,0)/l.items.length;
 for(let i=1;i<adv.length;i++)if(avg(adv[i])<=avg(adv[i-1]))bad('sentence packs not getting longer',adv[i].id,avg(adv[i]),avg(adv[i-1]));
 // placement bands: each typable, round-trips, and tests exactly the skill its name says

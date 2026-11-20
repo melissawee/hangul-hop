@@ -19,7 +19,7 @@ with sync_playwright() as p:
     pg.click('#bLessons');pg.screenshot(path=os.path.join(OUT, 'map.png'))
     # play every lesson end-to-end using the engine's own decomposition
     eng=pg.evaluate("1")
-    for i in range(22):
+    for i in range(29):
         pg.click('#bLessons') if pg.query_selector('#bLessons') else None
         pg.click(f'.lcard[data-i="{i}"]')
         if i in (0,7,11): pg.screenshot(path=os.path.join(OUT, f'intro_{i}.png'))
@@ -39,7 +39,7 @@ with sync_playwright() as p:
         assert stars.count('★')==3 and '☆' not in stars, (i,stars)
         if i==0: pg.screenshot(path=os.path.join(OUT, 'result.png'))
         pg.click('#map')
-    print('all 22 packs playable, 3 stars each, 0 mistakes')
+    print('all 29 packs playable, 3 stars each, 0 mistakes')
     # a mistake is rejected + counted, and mid-lesson screenshot
     pg.click('.lcard[data-i="1"]');pg.click('#go')
     pg.keyboard.press('KeyQ')  # wrong key

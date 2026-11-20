@@ -359,33 +359,105 @@ function placementResult(p,cpm,results){
   </div>`,()=>{$('#go').onclick=()=>lessonIntro(start);$('#map').onclick=lessonMap;$('#again').onclick=placementIntro;});
 }
 
-// ---------- LESSON MAP ----------
+// ---------- LESSON MAP: the Hop Trail ----------
+// A winding path of levels. The bunny sits on your next level and hops along the trail when you progress.
+const WORLDS={
+  'Everyday words':['🌸','Meadow of Words','pink'],
+  'Power-ups':['⭐','Power-up Peaks','lav'],
+  'Real sentences':['💬','Phrase Pond','sky'],
+  'Sentence Studio':['🏙️','Sentence City','mint'],
+  'Master Class':['🏆','Master Mountain','butter']
+};
+const TW=360,TSTEP=118,THEAD=84,TTOP=70;
+function trailLayout(){
+  const XS=[180,270,180,90];let y=TTOP,lastG='',k=0;const pts=[],heads=[];
+  LESSONS.forEach((l,i)=>{
+    if(l.group!==lastG){lastG=l.group;heads.push({g:l.group,y:y+THEAD/2-12});y+=THEAD;k=0;}
+    pts.push({x:XS[k%4],y,i});y+=TSTEP;k++;
+  });
+  return {pts,heads,H:y+TTOP-30};
+}
+// point on the S-curve between two trail nodes (vertical tangents), t in 0..1
+function bez(a,b,t){const my=(a.y+b.y)/2,u=1-t;
+  return {x:u*u*u*a.x+3*u*u*t*a.x+3*u*t*t*b.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*my+3*u*t*t*my+t*t*t*b.y};}
+const reducedMotion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+function worldProgress(g){const ls=LESSONS.filter(l=>l.group===g);return {done:ls.filter(l=>save.stars[l.id]>0).length,n:ls.length};}
+function trailRank(done){const R=[[0,'Fresh Sprout','🌱'],[3,'Tiny Bunny','🐰'],[8,'Happy Kitten','🐱'],[13,'Sparkle Star','⭐'],[19,'Rainbow Unicorn','🦄'],[25,'Dream Cloud','☁️'],[29,'Cloud Queen','👑']];
+  let r=R[0];R.forEach(x=>{if(done>=x[0])r=x;});return r;}
+
 function lessonMap(){
   const pl=save.placed,from=pl?pl.start:0;
   let nextI=LESSONS.findIndex((l,i)=>i>=from&&!(save.stars[l.id]>0));
   if(nextI<0)nextI=LESSONS.findIndex(l=>!(save.stars[l.id]>0));
-  let lastG='',cards='';
-  LESSONS.forEach((l,i)=>{
-    if(l.group!==lastG){lastG=l.group;cards+=`<h3 class="grp">${l.group}</h3>`;}
-    const skipped=pl&&i<from&&!(save.stars[l.id]>0);
-    cards+=`<button class="lcard c${i%6}${i===nextI?' next':''}" data-i="${i}">
-      <span class="num">${i+1}</span><div class="em">${l.emoji}</div><h3>${l.title}</h3>
-      <div class="sample">${l.items.slice(0,(l.group==='Everyday words'||l.group==='Power-ups')?2:1).map(w=>w[0]).join(' · ')}</div>
-      ${skipped?'<span class="passed-tag">✓ passed by the test</span>':`<div class="stars">${stars(save.stars[l.id]||0)}</div>`}</button>`;
-  });
+  const allDone=nextI<0;if(allDone)nextI=LESSONS.length-1;
+  const {pts,heads,H}=trailLayout();
+  const done=LESSONS.filter(l=>save.stars[l.id]>0).length,carrots=totalStars();
+  const [rname,rem]=[trailRank(done)[1],trailRank(done)[2]];
+  // path: one S-curve per hop
+  let d=`M${pts[0].x} ${pts[0].y}`;
+  for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],my=(a.y+b.y)/2;d+=` C${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`;}
+  let dDone=`M${pts[0].x} ${pts[0].y}`;
+  for(let i=1;i<=nextI&&i<pts.length;i++){const a=pts[i-1],b=pts[i],my=(a.y+b.y)/2;dDone+=` C${a.x} ${my} ${b.x} ${my} ${b.x} ${b.y}`;}
+  const pc=(v,tot)=>(v/tot*100).toFixed(3)+'%';
+  const hd=heads.map(h=>{const w=WORLDS[h.g]||['🐰',h.g,'pink'],wp=worldProgress(h.g);
+    return `<div class="world w-${w[2]}${wp.done===wp.n?' cleared':''}" style="top:${pc(h.y,H)}"><span class="wem">${w[0]}</span><b>${w[1]}</b><small>${wp.done===wp.n?'🎉 cleared!':wp.done+' / '+wp.n}</small></div>`;}).join('');
+  const nodes=pts.map(p=>{const l=LESSONS[p.i],st=save.stars[l.id]||0,skipped=pl&&p.i<from&&!st,right=p.x<=180;
+    const state=p.i===nextI&&!allDone?' next':st>0?' done':'';
+    return `<button class="lcard node c${p.i%6}${state}${right?' lr':' ll'}" data-i="${p.i}" style="left:${pc(p.x,TW)};top:${pc(p.y,H)}" aria-label="Level ${p.i+1}: ${l.title}">
+      <span class="orb"><span class="em">${l.emoji}</span><span class="num">${p.i+1}</span></span>
+      <span class="lab"><b>${l.title}</b>${skipped?'<i class="pt2">✓ passed by the test</i>':`<span class="stars">${stars(st)}</span>`}</span></button>`;}).join('');
   const banner=pl?`<div class="banner"><span>${PLEVELS[pl.p][1]}</span><span>Your level: <b>${PLEVELS[pl.p][0]}</b> — we picked <b>lesson ${Math.min(from,LESSONS.length-1)+1}: ${LESSONS[Math.min(from,LESSONS.length-1)].title}</b> for you.</span></div>`
     :`<div class="banner"><span>🎯</span><span>Not sure where to start? <button class="btn ghost" id="bPlace" style="font-size:15px;padding:6px 16px">Find my level</button></span></div>`;
-  setScreen(`<div class="topbar"><button class="btn ghost" id="back">← Home</button><h2>Pick a lesson</h2></div>
-  ${banner}<div class="grid">${cards}</div>`,
+  setScreen(`<div class="topbar"><button class="btn ghost" id="back">← Home</button><h2>Hop Trail</h2></div>
+  <div class="hud"><div><span>${rem}</span><b>${rname}</b></div><div><span>🥕</span><b>${carrots}<small> / ${LESSONS.length*3}</small></b></div><div><span>🚩</span><b>${done}<small> / ${LESSONS.length}</small></b></div></div>
+  ${banner}
+  <div class="trail" id="trail" style="aspect-ratio:${TW}/${H}">
+    <svg class="tsvg" viewBox="0 0 ${TW} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="tpath" d="${d}"/><path class="tdone" d="${dDone}"/></svg>
+    ${hd}${nodes}
+    <div class="hopper" id="hopper">${mascot('trailb')}</div>
+  </div>`,
   ()=>{$('#back').onclick=home;if($('#bPlace'))$('#bPlace').onclick=placementIntro;
-    document.querySelectorAll('.lcard').forEach(c=>c.onclick=()=>lessonIntro(+c.dataset.i));});
+    const hopper=$('#hopper'),trail=$('#trail');
+    const place=(pt)=>{hopper.style.left=pc(pt.x,TW);hopper.style.top=`calc(${pc(pt.y,H)} - 46px)`;};
+    // the bunny remembers where it last stood; hop from there to the current level
+    let from0=Number.isInteger(save.pos)&&save.pos>=0&&save.pos<pts.length?save.pos:nextI;
+    const hopTo=(i0,i1,ms,done)=>{
+      const dir=i1>=i0?1:-1,seq=[];for(let i=i0;i!==i1;i+=dir)seq.push([pts[i],pts[i+dir]]);
+      if(!seq.length||reducedMotion()){place(pts[i1]);done&&done();return;}
+      let over=false;const finish=()=>{if(over)return;over=true;hopper.classList.remove('hopping');place(pts[i1]);hopper.dataset.k='';done&&done();};
+      // safety net: if frames are throttled (background tab) the level still opens on time
+      setTimeout(finish,ms+500);
+      const per=Math.min(ms/seq.length,650),t0=performance.now();hopper.classList.add('hopping');
+      const step=(now)=>{
+        const el=Math.max(0,now-t0),k=Math.min(seq.length-1,Math.floor(el/per)),f=Math.min(1,(el-k*per)/per);
+        const [a,b]=seq[k],pt=bez(a,b,f),lift=Math.sin(f*Math.PI)*34*(TW/trail.clientWidth);
+        hopper.style.left=pc(pt.x,TW);hopper.style.top=`calc(${pc(pt.y-lift,H)} - 46px)`;
+        hopper.style.setProperty('--sq',(1+Math.sin(f*Math.PI)*.1).toFixed(3));
+        if(hopper.dataset.k!==String(k)){hopper.dataset.k=String(k);sfx.key();}
+        if(over)return;
+        if(el<per*seq.length)requestAnimationFrame(step);
+        else if(!over){burst(hopper,8);sfx.ok();finish();}
+      };requestAnimationFrame(step);
+    };
+    place(pts[from0]);
+    const target=$(`.node[data-i="${nextI}"]`);
+    if(from0!==nextI)hopTo(from0,nextI,Math.max(900,Math.abs(nextI-from0)*520));
+    save.pos=nextI;persist();
+    // bring the bunny into view (the trail is tall)
+    setTimeout(()=>{try{(target||hopper).scrollIntoView({block:'center',behavior:reducedMotion()?'auto':'smooth'});}catch(e){}},40);
+    document.querySelectorAll('.node').forEach(c=>c.onclick=()=>{
+      const i=+c.dataset.i;
+      // tap a level: the bunny hops over to it, then the lesson opens
+      const cur=Number.isInteger(save.pos)?save.pos:nextI;
+      save.pos=i;persist();hopTo(Math.min(cur,pts.length-1),i,Math.min(900,Math.abs(i-cur)*260+300),()=>lessonIntro(i));
+    });});
 }
 
 // ---------- LESSON INTRO ----------
 function lessonIntro(i){
   const L=LESSONS[i],nk=newKeys(i);
   const chips=nk.map(j=>{const k=JAMO2KEY[j];return `<div class="chip"><b>${j}</b><span>${SOUND[j]}</span><br><span class="kn">${k.shift?'Shift + ':''}${kname(k.code)}</span></div>`;}).join('');
-  const nShow=L.group==='Sentence Studio'?2:4;
+  const nShow=(L.group==='Everyday words'||L.group==='Power-ups')?4:2;
   const words=L.items.slice(0,nShow).map(w=>`<span class="chip"><b>${w[0]}</b><span>${w[3]} ${w[2]}</span></span>`).join('');
   setScreen(`<div class="card intro">
     <div class="topbar" style="margin:0"><button class="btn ghost" id="back">← Lessons</button><h2>${L.emoji} ${i+1}. ${L.title}</h2></div>
