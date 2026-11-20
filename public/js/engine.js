@@ -232,9 +232,9 @@ function warmFocus(i,stats,rnd=Math.random){
   const score=j=>wk(j)*Math.sqrt(cnt[j])*(JAMO2KEY[j]&&JAMO2KEY[j].shift?1.6:1)/Math.pow(glob[j]||1,.4)*(.9+.2*rnd());
   return {keys:Object.keys(cnt).sort((a,b)=>score(b)-score(a)).slice(0,6),isNew:false};
 }
-function warmSyllables(i,focus,n,rnd=Math.random){
+function warmSyllables(L,focus,n,rnd=Math.random){
   const set=new Set(focus),seen=new Map();
-  LESSONS[i].items.forEach(w=>[...w[0]].forEach(ch=>{if(ch!==' ')seen.set(ch,decomp(ch));}));
+  L.items.forEach(w=>[...w[0]].forEach(ch=>{if(ch!==' ')seen.set(ch,decomp(ch));}));
   const all=[...seen].map(([ch,js])=>({ch,js,hit:js.filter(j=>set.has(j)).length}));
   // 1) cover: greedily pick blocks that contain the most still-uncovered focus keys (shortest first), at most 8
   const chosen=[],left=new Set(focus);
@@ -250,8 +250,8 @@ function warmSyllables(i,focus,n,rnd=Math.random){
   for(let k=0;k<m;k++)chosen.push(base[m===1?0:Math.round(k*(base.length-1)/(m-1))]);
   return [...new Set(chosen.sort((x,y)=>x.js.length-y.js.length).map(c=>c.ch))];
 }
-function warmWords(i,focus,n,rnd=Math.random){
-  const L=LESSONS[i],set=new Set(focus),hit=kr=>decomp(kr).filter(j=>set.has(j)).length;
+function warmWords(L,focus,n,rnd=Math.random){
+  const set=new Set(focus),hit=kr=>decomp(kr).filter(j=>set.has(j)).length;
   if(!isSentencePack(L)){
     const pool=L.items.slice().sort((a,b)=>(hit(b[0])>0)-(hit(a[0])>0)||(decomp(a[0]).length+rnd()*2)-(decomp(b[0]).length+rnd()*2));
     return pool.slice(0,n).sort((a,b)=>decomp(a[0]).length-decomp(b[0]).length);
@@ -270,15 +270,23 @@ function warmWords(i,focus,n,rnd=Math.random){
   out.sort((a,b)=>decomp(a[0]).length-decomp(b[0]).length);
   return out;
 }
-function buildWarmup(i,stats,rnd=Math.random){
-  const F=warmFocus(i,stats,rnd),L=LESSONS[i];
+// the keys you miss most, across the whole course (same rule as the 'weak' tier in masteryOf)
+const weakKeyList=stats=>KEYORDER.filter(j=>{const x=stats[j];return x&&x.n>=1&&masteryOf(x)==='weak';})
+  .sort((a,b)=>stats[b].miss/stats[b].n-stats[a].miss/stats[a].n||stats[b].n-stats[a].n).slice(0,6);
+const WEAKPOOL={group:'Everyday words',items:LESSONS.slice(0,11).flatMap(l=>l.items)};
+// i = lesson index, or -1 for the "weak keys" mix from every lesson. keys = optional override (e.g. just the ones you missed)
+function buildWarmup(i,stats,rnd=Math.random,keys){
+  const L=i<0?WEAKPOOL:LESSONS[i],custom=!!(keys&&keys.length);
+  const F=custom?{keys:keys.slice(0,8),isNew:false}:i<0?{keys:weakKeyList(stats),isNew:false}:warmFocus(i,stats,rnd);
+  if(!F.keys.length)F.keys=KEYORDER.slice(0,6);
   const kc=F.keys.length<=3?8:Math.min(14,F.keys.length*2);
+  const ktip=custom?'Just the keys you missed — a quick do-over!':i<0?'Your trickiest keys from across all your lessons.':F.isNew?'These keys are new in this lesson. Look first, then press!':'No brand-new keys here, so we\'ll drill the ones that matter most in this lesson.';
   return {
-    focus:F.keys,isNew:F.isNew,
+    focus:F.keys,isNew:F.isNew,custom,weak:i<0,
     stages:[
-      {id:'keys',name:'Find the keys',tip:F.isNew?'These keys are new in this lesson. Look first, then press!':'No brand-new keys here, so we\'ll drill the ones that matter most in this lesson.',prompts:buildPrompts(F.keys,stats,kc,rnd)},
-      {id:'syl',name:'Build blocks',tip:'Letters snap together into one block. Type the letters in order — Hangul builds the block for you.',prompts:warmSyllables(i,F.keys,6,rnd)},
-      {id:'word',name:isSentencePack(L)?'Phrase sprint':'Word sprint',tip:isSentencePack(L)?'Little pieces of this lesson\'s sentences — watch the Space bar between words.':'Real words from this lesson. No hints unless you slip!',items:warmWords(i,F.keys,4,rnd)}
+      {id:'keys',name:'Find the keys',tip:ktip,prompts:buildPrompts(F.keys,stats,kc,rnd)},
+      {id:'syl',name:'Build blocks',tip:'Letters snap together into one block. Type the letters in order — Hangul builds the block for you.',prompts:warmSyllables(L,F.keys,6,rnd)},
+      {id:'word',name:isSentencePack(L)?'Phrase sprint':'Word sprint',tip:isSentencePack(L)?'Little pieces of this lesson\'s sentences — watch the Space bar between words.':'Real words that use these keys. No hints unless you slip!',items:warmWords(L,F.keys,4,rnd)}
     ]
   };
 }

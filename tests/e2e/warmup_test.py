@@ -109,6 +109,51 @@ with sync_playwright() as p:
     st = json.loads(pg.evaluate("localStorage.getItem('hangulhop')")); assert any(v["miss"] > 0 for v in st["keyStats"].values())
     assert not errs, errs; ctx.close()
 
+    # 3b) "retry missed keys": slip in a lesson warm-up -> retry button -> custom warm-up on just those keys
+    ctx = b.new_context(viewport={"width": 1000, "height": 900}); ctx.route("**/fonts.*/**", lambda r: r.abort())
+    r_ = ctx.new_page(); errs = []; r_.on("pageerror", lambda e: errs.append(str(e))); r_.goto(BASE)
+    r_.click("#bLessons"); r_.wait_for_selector(".node"); r_.click('.node[data-i="14"]'); r_.wait_for_selector("#warm"); r_.click("#warm"); r_.wait_for_selector("#kp")
+    play_warmup(r_, slip_at=(0, 1))
+    assert r_.query_selector("#retry"), "retry button after a slip"
+    missed = r_.eval_on_selector_all(".missed .chip b", "e=>e.map(x=>x.textContent)"); assert len(missed) >= 1
+    assert f"({len(missed)})" in r_.inner_text("#retry")
+    before = json.loads(r_.evaluate("localStorage.getItem('hangulhop')"))["warm"]
+    r_.click("#retry"); r_.wait_for_selector("#kp")
+    assert "missed" in r_.inner_text("#wb"), r_.inner_text("#wb")
+    firsts = []
+    for _ in range(8):
+        t = r_.inner_text("#kp"); firsts.append(t); press(r_, t)
+        r_.wait_for_function("([t,c])=>document.querySelector('#cnt').textContent!==c || document.querySelector('.wstep.cur').dataset.k!=='0'", [t, r_.inner_text("#cnt")], timeout=5000)
+    assert set(firsts) <= set(missed), (firsts, missed)
+    assert cur_step(r_) == "1"
+    play_warmup(r_)          # finish the custom warm-up
+    assert "Full warm-up" in r_.inner_text("#again") and not r_.query_selector("#retry")
+    assert json.loads(r_.evaluate("localStorage.getItem('hangulhop')"))["warm"] == before, "retry rounds don't change lesson warm-up stars"
+    r_.click("#go"); r_.wait_for_selector(".dots")           # still leads into the lesson
+    assert not errs, errs; ctx.close()
+
+    # 3c) weak-key warm-up across all lessons (from the home screen and the trail)
+    ctx = b.new_context(viewport={"width": 1000, "height": 900}); ctx.route("**/fonts.*/**", lambda r: r.abort())
+    w_ = ctx.new_page(); errs = []; w_.on("pageerror", lambda e: errs.append(str(e))); w_.goto(BASE)
+    assert not w_.query_selector("#bWeak"), "no weak button with no history"
+    w_.evaluate("""()=>localStorage.setItem('hangulhop',JSON.stringify({stars:{},keyStats:{'ㅂ':{n:5,miss:5},'ㅊ':{n:4,miss:3},'ㅈ':{n:5,miss:3},'ㅁ':{n:6,miss:0}}}))""")
+    w_.reload(); w_.wait_for_selector("#bWeak"); assert "3 keys" in w_.inner_text("#bWeak")
+    w_.click("#bLessons"); w_.wait_for_selector("#bWeak2"); w_.click("#back"); w_.wait_for_selector("#bWeak")
+    w_.click("#bWeak"); w_.wait_for_selector("#kp")
+    assert "trickiest" in w_.inner_text("#wb"), w_.inner_text("#wb")
+    ks = []
+    for _ in range(8):
+        t = w_.inner_text("#kp"); ks.append(t); press(w_, t)
+        w_.wait_for_function("([t,c])=>document.querySelector('#cnt').textContent!==c || document.querySelector('.wstep.cur').dataset.k!=='0'", [t, w_.inner_text("#cnt")], timeout=5000)
+    assert set(ks) <= {"ㅂ", "ㅊ", "ㅈ"}, ks
+    seen = play_warmup(w_)
+    assert w_.query_selector("#trail") and not w_.query_selector("#go"), "weak result goes back to the trail, no lesson"
+    assert "Weak keys" in w_.inner_text(".rank")
+    assert all(len(x) == 1 for x in seen[1])
+    w_.click("#trail"); w_.wait_for_selector(".node")
+    w_.screenshot(path=os.path.join(OUT, "warm_weak_trail.png"))
+    assert not errs, errs; ctx.close()
+
     # 4) phone: tap through a sentence-level warm-up, no overflow, keyboard docked
     ctx = b.new_context(viewport={"width": 375, "height": 667}, has_touch=True, is_mobile=True, device_scale_factor=2); ctx.route("**/fonts.*/**", lambda r: r.abort())
     q = ctx.new_page(); errs = []; q.on("pageerror", lambda e: errs.append(str(e))); q.goto(BASE)

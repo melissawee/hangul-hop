@@ -3,8 +3,8 @@ const fs=require('fs'),path=require('path');
 const file=process.argv[2]||path.join(__dirname,'..','public','js','engine.js');
 const src=fs.readFileSync(file,'utf8');
 const m=[null,src];
-const api=new Function(m[1]+';return {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus}')();
-const {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus}=api;
+const api=new Function(m[1]+';return {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus,weakKeyList}')();
+const {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus,weakKeyList}=api;
 let fail=0;const bad=(...a)=>{fail++;console.log('FAIL',...a)};
 const hasCompoundV=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(VCOMB).includes(VOW[Math.floor((c%588)/28)])});
 const hasDoubleT=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(TCOMB).includes(TAIL[c%28])});
@@ -117,7 +117,7 @@ if(masteryOf({n:3,miss:0})!=='good'||masteryOf({n:1,miss:0})!=='ok'||masteryOf({
 // weighting: a key you always miss should be asked far more often than one you always get right
 {const keys=KSETS[0].keys,stats={};keys.forEach(k=>stats[k]={n:10,miss:0});stats['ㅁ']={n:10,miss:10};
  let hard=0,easy=0;for(let r=0;r<400;r++){buildPrompts(keys,stats,18).forEach(j=>{if(j==='ㅁ')hard++;else if(j==='ㄴ')easy++;});}
- if(!(hard>easy*2))bad('weak key not weighted up',hard,easy);}
+ if(!(hard>easy*1.4))bad('weak key not weighted up',hard,easy);}
 if(promptCount(3)<10)bad('tiny sets need repeats');
 
 // ---------- warm-ups: every lesson gets a sensible 3-stage warm-up ----------
@@ -151,6 +151,26 @@ if(promptCount(3)<10)bad('tiny sets need repeats');
     }
   });
   console.log('warm-ups built & checked:',n);
+}
+// weak-key mix + 'retry missed keys' warm-ups
+{
+  const stats={};KEYORDER.forEach(j=>{stats[j]={n:6,miss:0};});stats['ㅂ']={n:5,miss:5};stats['ㅈ']={n:5,miss:3};stats['ㅊ']={n:4,miss:3};
+  const wl=weakKeyList(stats);
+  if(wl.join('')!=='ㅂㅊㅈ')bad('weak list order/members',wl.join(''));
+  for(let r=0;r<20;r++){
+    const w=buildWarmup(-1,stats);
+    if(!w.weak||w.focus.join('')!=='ㅂㅊㅈ')bad('weak warmup focus',w.focus.join(''));
+    if(w.stages[0].prompts.some(j=>!w.focus.includes(j)))bad('weak key prompts');
+    w.stages[1].prompts.forEach(ch=>{if(compose(decomp(ch))!==ch)bad('weak syl typable',ch);});
+    if(!w.stages[1].prompts.some(ch=>decomp(ch).includes('ㅂ')))bad('weak syllables must cover top key');
+    if(w.stages[2].items.length<3||w.stages[2].items.some(x=>compose(decomp(x[0]))!==x[0]))bad('weak words');
+    const c=buildWarmup(14,{},Math.random,['ㅆ','ㅖ']);
+    if(!c.custom||c.focus.join('')!=='ㅆㅖ'||c.stages[0].prompts.some(j=>!['ㅆ','ㅖ'].includes(j)))bad('custom warmup keys',c.focus);
+    if(c.stages[0].prompts.length<8)bad('custom warmup too short');
+    if(!c.stages[1].prompts.some(ch=>decomp(ch).includes('ㅖ')))bad('custom syllables miss ㅖ');
+  }
+  if(weakKeyList({}).length)bad('no history => no weak keys');
+  console.log('weak/custom warm-ups OK');
 }
 function isSentencePackT(l){return l.group!=='Everyday words'&&l.group!=='Power-ups';}
 

@@ -3,7 +3,7 @@
 A cute pastel game that teaches and tests **Korean (Hangul) typing** — for learners who can speak a bit
 (hello, Duolingo!) but have never typed it. Installable on your phone as a PWA, works offline.
 
-**Features:** placement test · **Hop Trail** map where the bunny hops along 29 levels across 5 worlds · word-first lessons with a **3-step warm-up on every level** (find the keys → build blocks → type words) · power-ups (shift, compound vowels, double finals) · 17 sentence levels up to the 3-part **Master Class** · speed test (타수/min) · Key Practice for memorising the 2-set keyboard · phone-sized keyboard.
+**Features:** placement test · **Hop Trail** map where the bunny hops along 29 levels across 5 worlds · word-first lessons with a **3-step warm-up on every level** (find the keys → build blocks → type words), a **retry-missed-keys** button, and a **weak-key warm-up** that mixes your trickiest keys from every lesson · power-ups (shift, compound vowels, double finals) · 17 sentence levels up to the 3-part **Master Class** · speed test (타수/min) · Key Practice for memorising the 2-set keyboard · phone-sized keyboard.
 
 ## Install on your phone
 Open the deployed site, then:

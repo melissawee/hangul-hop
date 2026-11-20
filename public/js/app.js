@@ -150,7 +150,7 @@ function home(){
     <div class="row">
       ${pl?`<button class="btn primary big" id="bLessons">🌸 Continue learning</button><button class="btn mint big" id="bSpeed">⏱ Speed Test</button>`
           :`<button class="btn primary big" id="bPlace">🎯 Find my level</button><button class="btn mint big" id="bLessons">🌸 Browse lessons</button><button class="btn ghost big" id="bSpeed">⏱ Speed Test</button>`}
-      <button class="btn mint big" id="bKeys">🔑 Key Practice</button>
+      <button class="btn mint big" id="bKeys">🔑 Key Practice</button>${weakKeys().length?`<button class="btn ghost big" id="bWeak">💪 Weak-key warm-up <small>${weakKeys().length} key${weakKeys().length>1?'s':''}</small></button>`:''}
       <button class="btn ghost big" id="bFree">🎈 Free Play</button>
     </div>
     ${pl?`<div class="level-chip">${lv[1]} Your level: ${lv[0]} <button id="bRetake">retake test</button></div>`:''}
@@ -160,7 +160,7 @@ function home(){
       <div class="stat"><b>${best||'–'}</b>best 타수 / min</div>
     </div>
     <div class="note">Type on your keyboard (or tap the on-screen keys on a phone). Works with any normal English keyboard.</div>
-  </div>`,()=>{$('#bLessons').onclick=lessonMap;$('#bSpeed').onclick=speedSetup;$('#bFree').onclick=freePlay;$('#bKeys').onclick=()=>keySetup();
+  </div>`,()=>{$('#bLessons').onclick=lessonMap;$('#bSpeed').onclick=speedSetup;$('#bFree').onclick=freePlay;$('#bKeys').onclick=()=>keySetup();if($('#bWeak'))$('#bWeak').onclick=()=>startWarmup(-1);
     if($('#bPlace'))$('#bPlace').onclick=placementIntro;if($('#bRetake'))$('#bRetake').onclick=placementIntro;
     renderInstall();});
 }
@@ -410,13 +410,13 @@ function lessonMap(){
     :`<div class="banner"><span>🎯</span><span>Not sure where to start? <button class="btn ghost" id="bPlace" style="font-size:15px;padding:6px 16px">Find my level</button></span></div>`;
   setScreen(`<div class="topbar"><button class="btn ghost" id="back">← Home</button><h2>Hop Trail</h2></div>
   <div class="hud"><div><span>${rem}</span><b>${rname}</b></div><div><span>🥕</span><b>${carrots}<small> / ${LESSONS.length*3}</small></b></div><div><span>🚩</span><b>${done}<small> / ${LESSONS.length}</small></b></div></div>
-  ${banner}
+  ${banner}${weakKeys().length?`<div class="banner"><span>💪</span><span>${weakKeys().length} tricky key${weakKeys().length>1?'s':''} found. <button class="btn ghost" id="bWeak2" style="font-size:15px;padding:6px 16px">Warm up my weak keys</button></span></div>`:''}
   <div class="trail" id="trail" style="aspect-ratio:${TW}/${H}">
     <svg class="tsvg" viewBox="0 0 ${TW} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="tpath" d="${d}"/><path class="tdone" d="${dDone}"/></svg>
     ${hd}${nodes}
     <div class="hopper" id="hopper">${mascot('trailb')}</div>
   </div>`,
-  ()=>{$('#back').onclick=home;if($('#bPlace'))$('#bPlace').onclick=placementIntro;
+  ()=>{$('#back').onclick=home;if($('#bPlace'))$('#bPlace').onclick=placementIntro;if($('#bWeak2'))$('#bWeak2').onclick=()=>startWarmup(-1);
     const hopper=$('#hopper'),trail=$('#trail');
     const place=(pt)=>{hopper.style.left=pc(pt.x,TW);hopper.style.top=`calc(${pc(pt.y,H)} - 46px)`;};
     // the bunny remembers where it last stood; hop from there to the current level
@@ -478,8 +478,8 @@ function lessonIntro(i){
 
 // ---------- WARM-UP: 3 short stages made from the lesson itself ----------
 const STAGE_ICON={keys:'🔎',syl:'🧩',word:'⌨️'};
-function startWarmup(i){
-  const L=LESSONS[i],W=buildWarmup(i,save.keyStats),S=W.stages;
+function startWarmup(i,keys){
+  const L=i>=0?LESSONS[i]:null,W=buildWarmup(i,save.keyStats,Math.random,keys),S=W.stages,leave=()=>i>=0?lessonIntro(i):lessonMap();
   const st={s:0,r:0,locked:false,missed:false,missJ:new Set(),buf:[],tj:[],t0:0,t00:Date.now(),first:0,total:0,roundMiss:{},stage:[0,0,0],stageN:[0,0,0]};
   const size=k=>S[k].prompts?S[k].prompts.length:S[k].items.length;
   setScreen(`<div class="card play warm">
@@ -539,7 +539,7 @@ function startWarmup(i){
     }
     function finish(){
       const acc=st.first/st.total,sc=acc>=.9?3:acc>=.7?2:1,secs=(Date.now()-st.t00)/1000;
-      save.warm[L.id]=Math.max(save.warm[L.id]||0,sc);persist();
+      if(L&&!W.custom){save.warm[L.id]=Math.max(save.warm[L.id]||0,sc);persist();}
       sfx.win();confetti(sc*12+8);warmResult(i,{acc:Math.round(acc*100),sc,secs,roundMiss:st.roundMiss,W});
     }
     mode={
@@ -575,23 +575,29 @@ function startWarmup(i){
         }
       },
       back(){const sg=S[st.s];if(st.locked||sg.id==='keys'||!st.buf.length)return;st.buf.pop();showTyped();updateHint();},
-      esc:()=>lessonIntro(i)
+      esc:leave
     };
-    $('#back').onclick=()=>lessonIntro(i);show();
+    $('#back').onclick=leave;show();
   });
 }
 function warmResult(i,r){
-  const L=LESSONS[i],miss=Object.entries(r.roundMiss).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const L=i>=0?LESSONS[i]:null,W=r.W,miss=Object.entries(r.roundMiss).sort((a,b)=>b[1]-a[1]).slice(0,8),missed=miss.map(x=>x[0]);
+  const title=W.weak?'Weak keys warmed up! 💪':W.custom?(missed.length?'Better! A few still tricky':'Those keys are yours now! 🌟'):r.sc===3?'Fully warmed up! 🔥':r.sc===2?'Nicely warmed up!':'Warm enough — let\'s go!';
   setScreen(`<div class="card result">
     ${mascot('hop happy')}
-    <div class="rank">${r.sc===3?'Fully warmed up! 🔥':r.sc===2?'Nicely warmed up!':'Warm enough — let\'s go!'}</div>
+    <div class="rank">${title}</div>
     <div class="bigstars">${stars(r.sc)}</div>
-    <div class="stats"><div class="stat"><b>${r.acc}%</b>right first try</div><div class="stat"><b>${Math.round(r.secs)}s</b>total time</div><div class="stat"><b>${r.W.stages.length}/3</b>steps done</div></div>
+    <div class="stats"><div class="stat"><b>${r.acc}%</b>right first try</div><div class="stat"><b>${Math.round(r.secs)}s</b>total time</div><div class="stat"><b>${W.focus.length}</b>keys drilled</div></div>
     ${miss.length?`<div><h3 style="margin:0 0 8px">Keys to remember</h3><div class="missed">${miss.map(([j,n])=>`<div class="chip"><b>${j}</b><span>${locDesc(JAMO2KEY[j].code)}</span></div>`).join('')}</div></div>`:'<div class="note" style="margin:0">Perfect — not one slip! 🎉</div>'}
-    <div class="row"><button class="btn primary big" id="go">Start the lesson →</button><button class="btn ghost" id="again">↻ Warm up again</button><button class="btn ghost" id="more">← Lesson info</button></div>
+    <div class="row">${L?'<button class="btn primary big" id="go">Start the lesson →</button>':'<button class="btn primary big" id="trail">🗺 Back to the trail</button>'}
+      ${missed.length?`<button class="btn mint" id="retry">🎯 Retry missed keys (${missed.length})</button>`:''}
+      <button class="btn ghost" id="again">↻ ${W.custom?'Full warm-up':'Warm up again'}</button>
+      ${L?'<button class="btn ghost" id="more">← Lesson info</button>':''}</div>
   </div>`,()=>{
-    $('#go').onclick=()=>startLesson(i);$('#again').onclick=()=>startWarmup(i);$('#more').onclick=()=>lessonIntro(i);
-    mode={key(){},back(){},esc:()=>lessonIntro(i)};
+    if($('#go'))$('#go').onclick=()=>startLesson(i);if($('#trail'))$('#trail').onclick=lessonMap;
+    if($('#retry'))$('#retry').onclick=()=>startWarmup(i,missed);
+    $('#again').onclick=()=>startWarmup(i);if($('#more'))$('#more').onclick=()=>lessonIntro(i);
+    mode={key(){},back(){},esc:()=>L?lessonIntro(i):lessonMap()};
   });
 }
 
