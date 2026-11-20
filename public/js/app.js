@@ -4,7 +4,7 @@ const $=s=>document.querySelector(s);
 const app=$('#app');
 const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const stars=(n,sz)=>'★'.repeat(n)+'<i>★</i>'.repeat(3-n);
-let save={stars:{},best:{},mute:false,hints:true,placed:null,keyStats:{},keyBest:{}};
+let save={stars:{},best:{},mute:false,hints:true,placed:null,keyStats:{},keyBest:{},warm:{}};
 try{Object.assign(save,JSON.parse(localStorage.getItem('hangulhop')||'{}'));}catch(e){}
 const persist=()=>{try{localStorage.setItem('hangulhop',JSON.stringify(save));}catch(e){}};
 
@@ -466,12 +466,132 @@ function lessonIntro(i){
     ${chips?`<div><h3 style="margin:0 0 8px">New keys in this pack</h3><div class="chips">${chips}</div>
       ${nk.length>6?'<div class="note">That\'s a lot of new keys — don\'t worry! The hints will show you where to put your fingers. You\'ll learn by doing. 🌸</div>':''}</div>`:'<div class="note" style="margin:0">No new keys in this pack — just practice! 🎉</div>'}
     ${keyboardHTML()}
-    <div class="row"><button class="btn primary big" id="go">Let's go! →</button>${nk.length?'<button class="btn mint" id="warm">🔑 Warm up these keys</button>':''}</div>
+    <div class="row"><button class="btn primary big" id="go">Let's go! →</button><button class="btn mint${!(save.stars[L.id]>0)&&!save.warm[L.id]?' nudge':''}" id="warm">🔥 Warm up first <small>~1 min</small></button></div>
+    ${save.warm[L.id]?`<div class="note" style="margin:0">🔥 Warmed up: <span class="stars" style="color:#f7b500">${stars(save.warm[L.id])}</span></div>`:''}
   </div>`,()=>{
     $('#back').onclick=lessonMap;$('#go').onclick=()=>startLesson(i);
-    if($('#warm'))$('#warm').onclick=()=>startKeyPractice({keys:nk,name:'Pack keys',id:'pack'+i,blind:false,back:()=>lessonIntro(i)});
+    $('#warm').onclick=()=>startWarmup(i);
     wireKeyboard();hl(null,nk.map(j=>JAMO2KEY[j].code).concat(nk.some(j=>JAMO2KEY[j].shift)?['SHIFT']:[]));
     mode={key:()=>{sfx.key();},back(){}};
+  });
+}
+
+// ---------- WARM-UP: 3 short stages made from the lesson itself ----------
+const STAGE_ICON={keys:'🔎',syl:'🧩',word:'⌨️'};
+function startWarmup(i){
+  const L=LESSONS[i],W=buildWarmup(i,save.keyStats),S=W.stages;
+  const st={s:0,r:0,locked:false,missed:false,missJ:new Set(),buf:[],tj:[],t0:0,t00:Date.now(),first:0,total:0,roundMiss:{},stage:[0,0,0],stageN:[0,0,0]};
+  const size=k=>S[k].prompts?S[k].prompts.length:S[k].items.length;
+  setScreen(`<div class="card play warm">
+    <div class="topbar" style="margin:0"><button class="btn ghost" id="back">← Quit</button>
+      <div class="wsteps" id="wsteps">${S.map((x,k)=>`<span class="wstep" data-k="${k}"><i>${STAGE_ICON[x.id]}</i>${x.name}</span>`).join('')}</div>
+      <b class="jua" id="cnt" style="font-size:20px;min-width:44px;text-align:right"></b></div>
+    <div class="timer"><i id="bar" style="width:0"></i></div>
+    <div class="wbanner" id="wb"></div>
+    <div class="stage">${mascot('sm')}<div class="words">
+      <div class="kprompt" id="kp"></div><div class="meta" id="ksound"></div>
+      <div class="target" id="target"></div><div class="meta" id="meta"></div><div class="typed" id="typed"></div></div></div>
+    <div class="hint k" id="hint"></div>
+    ${keyboardHTML(true)}
+  </div>`,()=>{
+    wireKeyboard();
+    const blind=W.focus.every(j=>masteryOf(save.keyStats[j])==='good');
+    const where=j=>{const k=JAMO2KEY[j],Ld=locDesc(k.code);
+      return MQ.matches?`${k.shift?'Shift + ':''}${Ld}`:`${k.shift?'Shift + ':''}<b>${kname(k.code)}</b> key · ${Ld} · ${FINGER[kname(k.code)]}`;};
+    const flash=(code,cls,ms)=>{const el=document.querySelector(`.key[data-code="${code}"]`);if(!el)return;el.classList.add(cls,'reveal');setTimeout(()=>el.classList.remove(cls,'reveal'),ms);};
+    const bump=(j,missed)=>{const x=save.keyStats[j]||(save.keyStats[j]={n:0,miss:0});x.n++;if(missed){x.miss++;st.roundMiss[j]=(st.roundMiss[j]||0)+1;}};
+    const typed=$('#typed'),target=$('#target');
+    const showTyped=()=>{typed.innerHTML=compose(st.buf)+'<span class="caret"></span>';};
+    const totalN=S.reduce((a,x,k)=>a+size(k),0),doneN=()=>S.slice(0,st.s).reduce((a,x,k)=>a+size(k),0)+st.r;
+    function chrome(){
+      document.querySelectorAll('.wstep').forEach(e=>{const k=+e.dataset.k;e.className='wstep'+(k<st.s?' done':k===st.s?' cur':'');});
+      $('#cnt').textContent=`${st.r+1}/${size(st.s)}`;$('#bar').style.width=(doneN()/totalN*100)+'%';
+      $('#wb').innerHTML=`<b>${STAGE_ICON[S[st.s].id]} Step ${st.s+1}: ${S[st.s].name}</b> <span>${S[st.s].tip}</span>`;
+      const kmode=S[st.s].id==='keys';
+      $('#kp').style.display=$('#ksound').style.display=kmode?'':'none';
+      target.style.display=$('#meta').style.display=typed.style.display=kmode?'none':'';
+      $('#kb').classList.toggle('blind',kmode&&blind);
+    }
+    function updateHint(){
+      const next=JAMO2KEY[st.tj[st.buf.length]];
+      if(S[st.s].id==='syl'&&next){hl(next);$('#hint').innerHTML=keyHint(st.tj[st.buf.length],next);}
+      else{hl(null);$('#hint').innerHTML='<small>No hints — you know this! 💪 (a wrong key will show you the way)</small>';}
+    }
+    function show(){
+      const sg=S[st.s];chrome();st.locked=false;st.missed=false;st.missJ=new Set();st.t0=Date.now();st.buf=[];
+      if(sg.id==='keys'){
+        const j=sg.prompts[st.r];
+        $('#kp').textContent=j;$('#ksound').innerHTML=`sounds like <b>${SOUND[j]}</b>${JAMO2KEY[j].shift?' · <b>needs Shift</b>':''}`;
+        $('#hint').innerHTML='Where is it? 🔎';hl(null,[]);
+      }else{
+        const kr=sg.id==='syl'?sg.prompts[st.r]:sg.items[st.r][0];
+        st.tj=decomp(kr);target.textContent=kr;fit(target,kr);fit(typed,kr);
+        $('#meta').innerHTML=sg.id==='syl'?'one block — letters snap together ✨':`${sg.items[st.r][3]} ${sg.items[st.r][1]?`<b>${sg.items[st.r][1]}</b> · `:''}${sg.items[st.r][2]}`;
+        showTyped();updateHint();
+      }
+    }
+    function next(){
+      st.r++;
+      if(st.r>=size(st.s)){st.s++;st.r=0;
+        if(st.s>=S.length)return finish();
+        sfx.ok();confetti(6);}
+      show();
+    }
+    function finish(){
+      const acc=st.first/st.total,sc=acc>=.9?3:acc>=.7?2:1,secs=(Date.now()-st.t00)/1000;
+      save.warm[L.id]=Math.max(save.warm[L.id]||0,sc);persist();
+      sfx.win();confetti(sc*12+8);warmResult(i,{acc:Math.round(acc*100),sc,secs,roundMiss:st.roundMiss,W});
+    }
+    mode={
+      key(code,sh){
+        if(st.locked)return;
+        const sg=S[st.s],j=jamoFor(code,sh);
+        if(sg.id==='keys'){
+          if(code==='Space')return;
+          const target=sg.prompts[st.r],tk=JAMO2KEY[target];
+          if(j===target){
+            st.locked=true;st.total++;if(!st.missed)st.first++;bump(target,st.missed);persist();
+            flash(code,'good',900);sfx.ok();if(!st.missed){mood(true);burst($('#kp'),8);}
+            $('#hint').innerHTML=`<span class="ok">✓ <b>${target}</b> lives on:</span> ${where(target)}`;
+            setTimeout(next,st.missed?1200:800);
+          }else{
+            st.missed=true;sfx.bad();const kp=$('#kp');kp.classList.remove('wiggle');void kp.offsetWidth;kp.classList.add('wiggle');
+            flash(code,'bad',1100);$('#hint').innerHTML=`That key is <b>${j===' '?'space':j}</b>. Look for <b>${target}</b> — ${where(target)}`;hl({code:tk.code,shift:tk.shift});
+          }
+          return;
+        }
+        const want=st.tj[st.buf.length];
+        if(j===want){
+          st.buf.push(j);sfx.key();showTyped();
+          if(st.buf.length===st.tj.length){
+            st.locked=true;hl(null);st.total++;if(!st.missed)st.first++;
+            new Set(st.tj.filter(x=>x!==' ')).forEach(x=>bump(x,st.missJ.has(x)));persist();
+            mood(true);sfx.ok();burst(target,12);typed.style.boxShadow='inset 0 0 0 4px var(--mint2)';
+            setTimeout(()=>{typed.style.boxShadow='';next();},700);
+          }else updateHint();
+        }else{
+          st.missed=true;st.missJ.add(want);sfx.bad();typed.classList.remove('wiggle');void typed.offsetWidth;typed.classList.add('wiggle');
+          const nx=JAMO2KEY[want];hl(nx);$('#hint').innerHTML=keyHint(want,nx,'Almost! You need ');
+        }
+      },
+      back(){const sg=S[st.s];if(st.locked||sg.id==='keys'||!st.buf.length)return;st.buf.pop();showTyped();updateHint();},
+      esc:()=>lessonIntro(i)
+    };
+    $('#back').onclick=()=>lessonIntro(i);show();
+  });
+}
+function warmResult(i,r){
+  const L=LESSONS[i],miss=Object.entries(r.roundMiss).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  setScreen(`<div class="card result">
+    ${mascot('hop happy')}
+    <div class="rank">${r.sc===3?'Fully warmed up! 🔥':r.sc===2?'Nicely warmed up!':'Warm enough — let\'s go!'}</div>
+    <div class="bigstars">${stars(r.sc)}</div>
+    <div class="stats"><div class="stat"><b>${r.acc}%</b>right first try</div><div class="stat"><b>${Math.round(r.secs)}s</b>total time</div><div class="stat"><b>${r.W.stages.length}/3</b>steps done</div></div>
+    ${miss.length?`<div><h3 style="margin:0 0 8px">Keys to remember</h3><div class="missed">${miss.map(([j,n])=>`<div class="chip"><b>${j}</b><span>${locDesc(JAMO2KEY[j].code)}</span></div>`).join('')}</div></div>`:'<div class="note" style="margin:0">Perfect — not one slip! 🎉</div>'}
+    <div class="row"><button class="btn primary big" id="go">Start the lesson →</button><button class="btn ghost" id="again">↻ Warm up again</button><button class="btn ghost" id="more">← Lesson info</button></div>
+  </div>`,()=>{
+    $('#go').onclick=()=>startLesson(i);$('#again').onclick=()=>startWarmup(i);$('#more').onclick=()=>lessonIntro(i);
+    mode={key(){},back(){},esc:()=>lessonIntro(i)};
   });
 }
 

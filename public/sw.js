@@ -9,7 +9,7 @@
  *
  * Bump VERSION whenever you change the PRECACHE list (a changed sw.js file is what triggers an update).
  */
-const VERSION = '2026-11-20.2';
+const VERSION = '2026-11-20.3';
 const SHELL = 'hangul-hop-shell-' + VERSION;
 const RUNTIME = 'hangul-hop-runtime-v1';
 const PRECACHE = [

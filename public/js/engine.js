@@ -215,4 +215,71 @@ function buildPrompts(keys,stats,count,rnd=Math.random){
   }
   return out;
 }
+
+// ---------- warm-up builder: 3 short stages tailored to a lesson ----------
+//  1) keys      find the keys this lesson leans on (its new keys, or - if it has none - the ones you're weakest at)
+//  2) syllables build single blocks taken from the lesson's own words, easiest first
+//  3) words     type 3-4 real words (or 2-word chunks of the sentences, so Space gets practised)
+const isSentencePack=l=>l.group!=='Everyday words'&&l.group!=='Power-ups';
+function warmFocus(i,stats,rnd=Math.random){
+  const nk=newKeys(i);
+  if(nk.length)return {keys:nk,isNew:true};
+  const cnt={};
+  LESSONS[i].items.forEach(w=>decomp(w[0]).forEach(j=>{if(j!==' ')cnt[j]=(cnt[j]||0)+1;}));
+  const wk=j=>{const x=stats[j];return(!x||!x.n)?1.5:1+3*(x.miss/x.n);};
+  // with no history, favour keys that are rare across the whole course and Shift keys (the ones fingers know least)
+  const glob={};LESSONS.forEach(l=>l.items.forEach(w=>decomp(w[0]).forEach(j=>{glob[j]=(glob[j]||0)+1;})));
+  const score=j=>wk(j)*Math.sqrt(cnt[j])*(JAMO2KEY[j]&&JAMO2KEY[j].shift?1.6:1)/Math.pow(glob[j]||1,.4)*(.9+.2*rnd());
+  return {keys:Object.keys(cnt).sort((a,b)=>score(b)-score(a)).slice(0,6),isNew:false};
+}
+function warmSyllables(i,focus,n,rnd=Math.random){
+  const set=new Set(focus),seen=new Map();
+  LESSONS[i].items.forEach(w=>[...w[0]].forEach(ch=>{if(ch!==' ')seen.set(ch,decomp(ch));}));
+  const all=[...seen].map(([ch,js])=>({ch,js,hit:js.filter(j=>set.has(j)).length}));
+  // 1) cover: greedily pick blocks that contain the most still-uncovered focus keys (shortest first), at most 8
+  const chosen=[],left=new Set(focus);
+  while(left.size&&chosen.length<8){
+    const c=all.filter(x=>!chosen.includes(x)&&x.js.some(j=>left.has(j)))
+      .sort((x,y)=>y.js.filter(j=>left.has(j)).length-x.js.filter(j=>left.has(j)).length||(x.js.length+rnd()*.8)-(y.js.length+rnd()*.8))[0];
+    if(!c)break;chosen.push(c);c.js.forEach(j=>left.delete(j));
+  }
+  // 2) fill up to n with blocks that use focus keys (or any block), spread from easy to hard
+  const hits=all.filter(x=>x.hit>0&&!chosen.includes(x)),rest=all.filter(x=>!chosen.includes(x));
+  const base=(hits.length?hits:rest).sort((x,y)=>(x.js.length+rnd()*.9)-(y.js.length+rnd()*.9));
+  const need=Math.max(0,n-chosen.length),m=Math.min(need,base.length);
+  for(let k=0;k<m;k++)chosen.push(base[m===1?0:Math.round(k*(base.length-1)/(m-1))]);
+  return [...new Set(chosen.sort((x,y)=>x.js.length-y.js.length).map(c=>c.ch))];
+}
+function warmWords(i,focus,n,rnd=Math.random){
+  const L=LESSONS[i],set=new Set(focus),hit=kr=>decomp(kr).filter(j=>set.has(j)).length;
+  if(!isSentencePack(L)){
+    const pool=L.items.slice().sort((a,b)=>(hit(b[0])>0)-(hit(a[0])>0)||(decomp(a[0]).length+rnd()*2)-(decomp(b[0]).length+rnd()*2));
+    return pool.slice(0,n).sort((a,b)=>decomp(a[0]).length-decomp(b[0]).length);
+  }
+  const lim=L.group==='Master Class'?26:L.group==='Sentence Studio'?20:16,cand=[];
+  L.items.forEach(it=>{const ws=it[0].split(' ');
+    for(let a=0;a<ws.length;a++){
+      for(const len of [2,1]){const kr=ws.slice(a,a+len).join(' ');
+        if(ws.slice(a,a+len).length<len)continue;
+        const jl=decomp(kr).length;
+        if(jl<=lim&&jl>=4){cand.push({kr,it,jl,h:hit(kr)});break;}}}});
+  const rank=(a,b)=>(b.h>0)-(a.h>0)||(rnd()-.5),sp=cand.filter(c=>c.kr.includes(' ')).sort(rank),one=cand.filter(c=>!c.kr.includes(' ')).sort(rank);
+  const used=new Set(),out=[],add=c=>{if(!c||used.has(c.it)||out.some(o=>o[0]===c.kr))return false;used.add(c.it);out.push([c.kr,'','part of: '+c.it[2],c.it[3]]);return true;};
+  for(const c of sp){if(out.length>=2)break;add(c);}
+  for(const c of [...one,...sp]){if(out.length>=n-1)break;add(c);}
+  out.sort((a,b)=>decomp(a[0]).length-decomp(b[0]).length);
+  return out;
+}
+function buildWarmup(i,stats,rnd=Math.random){
+  const F=warmFocus(i,stats,rnd),L=LESSONS[i];
+  const kc=F.keys.length<=3?8:Math.min(14,F.keys.length*2);
+  return {
+    focus:F.keys,isNew:F.isNew,
+    stages:[
+      {id:'keys',name:'Find the keys',tip:F.isNew?'These keys are new in this lesson. Look first, then press!':'No brand-new keys here, so we\'ll drill the ones that matter most in this lesson.',prompts:buildPrompts(F.keys,stats,kc,rnd)},
+      {id:'syl',name:'Build blocks',tip:'Letters snap together into one block. Type the letters in order — Hangul builds the block for you.',prompts:warmSyllables(i,F.keys,6,rnd)},
+      {id:'word',name:isSentencePack(L)?'Phrase sprint':'Word sprint',tip:isSentencePack(L)?'Little pieces of this lesson\'s sentences — watch the Space bar between words.':'Real words from this lesson. No hints unless you slip!',items:warmWords(i,F.keys,4,rnd)}
+    ]
+  };
+}
 // ===================== ENGINE END =====================

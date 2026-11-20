@@ -328,3 +328,19 @@ main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 .hopper.hopping .mascot{animation:none;transform-origin:50% 100%;transform:scaleY(var(--sq,1)) scaleX(calc(2 - var(--sq,1)))}
 @media (prefers-reduced-motion:reduce){.node.next .orb,.hopper .mascot{animation:none}}
 .node .lab .stars i{color:#e3daf3}
+
+/* ---------- warm-up ---------- */
+.warm .topbar{gap:8px}
+.wsteps{display:flex;gap:6px;flex:1;justify-content:center;flex-wrap:wrap}
+.wstep{font-family:'Jua',sans-serif;font-size:14px;background:#fff;border-radius:999px;padding:3px 10px;opacity:.55;box-shadow:0 2px 0 rgba(0,0,0,.06);white-space:nowrap}
+.wstep i{font-style:normal;margin-right:4px}
+.wstep.cur{opacity:1;background:var(--butter);box-shadow:0 3px 0 var(--butterd)}
+.wstep.done{opacity:1;background:var(--mint)}
+.wbanner{background:rgba(255,255,255,.75);border-radius:16px;padding:8px 14px;font-size:15px;line-height:1.35;margin:4px 0}
+.wbanner b{font-family:'Jua',sans-serif;font-weight:400;font-size:17px;display:block}
+.wbanner span{color:var(--soft)}
+.btn small{font-size:.8em;opacity:.75}
+.btn.nudge{animation:glow 1.8s ease-in-out infinite}
+@keyframes glow{0%,100%{box-shadow:0 4px 0 var(--mintd),0 0 0 0 rgba(98,201,162,.55)}50%{box-shadow:0 4px 0 var(--mintd),0 0 0 10px rgba(98,201,162,0)}}
+@media (max-width:700px){.wsteps{flex-wrap:nowrap;gap:4px}.wsteps .wstep,.wsteps .wstep.cur{font-size:0;padding:4px 8px}.wsteps .wstep i{font-size:17px;margin:0}.wbanner{font-size:13px;padding:6px 10px}.wbanner b{font-size:15px}}
+@media (prefers-reduced-motion:reduce){.btn.nudge{animation:none}}

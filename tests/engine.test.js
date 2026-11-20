@@ -3,8 +3,8 @@ const fs=require('fs'),path=require('path');
 const file=process.argv[2]||path.join(__dirname,'..','public','js','engine.js');
 const src=fs.readFileSync(file,'utf8');
 const m=[null,src];
-const api=new Function(m[1]+';return {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount}')();
-const {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount}=api;
+const api=new Function(m[1]+';return {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus}')();
+const {KEY,compose,decomp,JAMO2KEY,LESSONS,speedPool,newKeys,VOW,VCOMB,TAIL,TCOMB,PLACE,PLACE_PASSED_ALL,PLEVELS,KSETS,KEYORDER,ROWS,locDesc,masteryOf,buildPrompts,promptCount,buildWarmup,warmFocus}=api;
 let fail=0;const bad=(...a)=>{fail++;console.log('FAIL',...a)};
 const hasCompoundV=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(VCOMB).includes(VOW[Math.floor((c%588)/28)])});
 const hasDoubleT=w=>[...w].some(ch=>{const c=ch.charCodeAt(0)-0xAC00;return c>=0&&Object.values(TCOMB).includes(TAIL[c%28])});
@@ -119,5 +119,40 @@ if(masteryOf({n:3,miss:0})!=='good'||masteryOf({n:1,miss:0})!=='ok'||masteryOf({
  let hard=0,easy=0;for(let r=0;r<400;r++){buildPrompts(keys,stats,18).forEach(j=>{if(j==='ㅁ')hard++;else if(j==='ㄴ')easy++;});}
  if(!(hard>easy*2))bad('weak key not weighted up',hard,easy);}
 if(promptCount(3)<10)bad('tiny sets need repeats');
+
+// ---------- warm-ups: every lesson gets a sensible 3-stage warm-up ----------
+{
+  let n=0;
+  LESSONS.forEach((L,i)=>{
+    for(let rep=0;rep<5;rep++){
+      const stats=rep>2?Object.fromEntries(KEYORDER.map(j=>[j,{n:4,miss:rep===3?2:0}])):{};
+      const w=buildWarmup(i,stats);n++;
+      if(w.stages.length!==3)bad('warmup stages',L.id);
+      if(!w.focus.length||w.focus.length>(newKeys(i).length||6))bad('warmup focus size',L.id,w.focus.length);
+      if(newKeys(i).length&&w.focus.join()!==newKeys(i).join())bad('warmup should drill the new keys',L.id);
+      const [k,s,wd]=w.stages;
+      if(k.prompts.length<8||k.prompts.some(j=>!w.focus.includes(j)||!JAMO2KEY[j]))bad('warmup key prompts',L.id,k.prompts);
+      if(new Set(w.focus).size!==w.focus.length)bad('warmup focus dupes',L.id);
+      if(s.prompts.length<3||s.prompts.length>8)bad('warmup syllable count',L.id,s.prompts.length);
+      s.prompts.forEach(ch=>{if([...ch].length!==1||compose(decomp(ch))!==ch)bad('warmup syllable not typable',L.id,ch);});
+      // easy -> hard
+      const lens=s.prompts.map(ch=>decomp(ch).length);
+      if(lens[0]>lens[lens.length-1])bad('warmup syllables should ramp up',L.id,lens);
+      // every new key shows up in some block (when the pack has a block containing it)
+      if(newKeys(i).length<=7)newKeys(i).forEach(j=>{const has=L.items.some(it=>decomp(it[0]).includes(j));if(has&&!s.prompts.some(ch=>decomp(ch).includes(j)))bad('warmup syllables miss new key',L.id,j);});
+      if(wd.items.length<3||wd.items.length>4)bad('warmup word count',L.id,wd.items.length);
+      wd.items.forEach(([kr,rom,mean,emo])=>{
+        if(compose(decomp(kr))!==kr)bad('warmup word not typable',L.id,kr);
+        if(!mean||!emo)bad('warmup word meta',L.id,kr);
+        if(isSentencePackT(L)){if(decomp(kr).length>26)bad('warmup chunk too long',L.id,kr);}
+        else if(!L.items.some(it=>it[0]===kr))bad('warmup word not from pack',L.id,kr);
+      });
+      if(isSentencePackT(L)&&!wd.items.some(x=>x[0].includes(' ')))bad('sentence warmup should practise Space',L.id);
+    }
+  });
+  console.log('warm-ups built & checked:',n);
+}
+function isSentencePackT(l){return l.group!=='Everyday words'&&l.group!=='Power-ups';}
+
 console.log(fail?`${fail} FAILURES`:'ALL ENGINE TESTS PASSED','| packs:',LESSONS.length,'| words:',LESSONS.reduce((a,l)=>a+l.items.length,0),'| new keys in pack 1:',newKeys(0).length);
 process.exit(fail?1:0);

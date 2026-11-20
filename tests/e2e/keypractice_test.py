@@ -82,8 +82,8 @@ with sync_playwright() as p:
     press(pg,j);pg.wait_for_function(f"document.querySelector('#cnt').textContent.startsWith('2/')")
     pg.keyboard.press('Escape');pg.wait_for_selector('#sets')
     # --- warm-up from a lesson intro, returns to the lesson
-    pg.click('#back');pg.click('#bLessons');pg.click('.lcard[data-i="0"]');pg.click('#warm')
-    pg.wait_for_selector('#kp');assert pg.inner_text('#cnt')=='1/30'
+    pg.click("#back");pg.click("#bLessons");pg.click(".lcard[data-i=\"0\"]");pg.click("#warm")
+    pg.wait_for_selector('#kp');assert pg.inner_text('#cnt')=='1/14'
     pg.click('#back');assert 'Hello & Thanks' in pg.inner_text('h2')
     print('desktop key practice OK');assert not errs,errs;ctx.close()
     # --- phones

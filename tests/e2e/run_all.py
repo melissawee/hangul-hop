@@ -19,7 +19,7 @@ try:
     for _ in range(50):
         try: urllib.request.urlopen(base).read(); break
         except Exception: time.sleep(.1)
-    suites = ["pwa_test.py", "trail_test.py", "lessons_test.py", "phone_test.py", "placement_test.py", "keypractice_test.py"]
+    suites = ["pwa_test.py", "trail_test.py", "warmup_test.py", "lessons_test.py", "phone_test.py", "placement_test.py", "keypractice_test.py"]
     only = sys.argv[1:]
     for name in suites:
         if only and name not in only: continue

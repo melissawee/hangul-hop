@@ -5,15 +5,20 @@ Playwright polls with eval(), which the app's CSP (script-src 'self', no 'unsafe
 We keep the CSP enforced in the tests (so violations are caught) and poll with page.evaluate instead.
 Imported for its side effect by every suite.
 """
-import time
+import re, time
 from playwright.sync_api import Page, TimeoutError as PWTimeout
 
 def _wait_for_function(self, expression, arg=None, timeout=30000, polling=None):
     limit = time.time() + (30000 if timeout is None else timeout) / 1000
     last = None
+    is_fn = bool(re.match(r'^\s*(async\s*)?(\([^)]*\)|[\w$]+)\s*=>', expression)) or expression.lstrip().startswith('function')
     while True:
         try:
-            if self.evaluate("async()=>!!(await (" + expression + "))"):
+            if is_fn:
+                ok = self.evaluate("async a=>!!(await (" + expression + ")(a))", arg)
+            else:
+                ok = self.evaluate("async()=>!!(await (" + expression + "))")
+            if ok:
                 return True
         except Exception as e:          # e.g. the page is mid-navigation
             last = e
